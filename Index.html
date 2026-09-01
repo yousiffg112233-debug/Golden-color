@@ -1,1 +1,238 @@
-# Golden-color
+<!DOCTYPE html>
+<html dir="rtl" lang="ar">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>مطبعة اللون الذهبي PRO</title>
+    
+    <!-- مكتبات الربط القديمة والمستقرة للجوال -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+    
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" rel="stylesheet">
+    
+    <style>
+        body { font-family: 'IBM Plex Sans Arabic', sans-serif; background-color: #f7f9fc; }
+        .gold-card { border-right: 8px solid #d4af37; background: white; border-radius: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
+        .item-box { background: white; border-radius: 15px; border: 1px solid #edf2f7; padding: 15px; border-right: 5px solid #1a1a1a; }
+        .btn-gold { background: linear-gradient(135deg, #d4af37 0%, #735c00 100%); color: white; font-weight: bold; }
+        @media print { .no-print { display: none !important; } body { background: white; } }
+    </style>
+</head>
+<body class="pb-24">
+
+<div id="main-app">
+    <!-- الهيدر مع اللوجو -->
+    <header class="bg-white p-5 shadow-sm border-b-2 border-[#d4af37] flex justify-between items-center no-print">
+        <div class="flex items-center gap-2">
+            <div class="w-12 h-12 bg-black rounded-full flex items-center justify-center border-2 border-[#d4af37]">
+                <span class="text-[#d4af37] font-bold text-xl">G</span>
+            </div>
+            <div>
+                <h1 class="text-xl font-bold text-gray-800">اللون الذهبي</h1>
+                <p class="text-[9px] text-gray-400">إدارة الإنتاج والحسابات</p>
+            </div>
+        </div>
+        <div id="status" class="text-[10px] font-bold text-green-600 animate-pulse">متصل بالسحاب</div>
+    </header>
+
+    <main class="p-4 max-w-2xl mx-auto">
+        
+        <!-- شاشة الزبائن الرئيسية -->
+        <div id="screen-home">
+            <div class="grid grid-cols-2 gap-4 mb-6">
+                <div class="bg-white p-4 rounded-2xl shadow-sm border-b-4 border-red-500 text-center">
+                    <p class="text-[10px] text-gray-400">مجموع المتبقي (ديون)</p>
+                    <p id="total-rem" class="text-lg font-bold text-red-600">0</p>
+                </div>
+                <div class="bg-white p-4 rounded-2xl shadow-sm border-b-4 border-green-500 text-center">
+                    <p class="text-[10px] text-gray-400">إجمالي المحصل</p>
+                    <p id="total-dep" class="text-lg font-bold text-green-600">0</p>
+                </div>
+            </div>
+            <div id="customer-list" class="space-y-4">
+                <div class="text-center py-20 text-gray-300 font-bold">جاري جلب الزبائن...</div>
+            </div>
+        </div>
+
+        <!-- شاشة تفاصيل الزبون (الآيتمات) -->
+        <div id="screen-detail" class="hidden">
+            <button onclick="showHome()" class="mb-4 text-gray-400 font-bold flex items-center gap-1 no-print">
+                <span class="material-symbols-outlined">arrow_back</span> رجوع للزبائن
+            </button>
+            <div class="bg-black text-white p-6 rounded-3xl mb-6 relative shadow-xl">
+                <h2 id="det-cust-name" class="text-2xl font-bold mb-1"></h2>
+                <p id="det-cust-total" class="text-[#d4af37] text-sm font-bold"></p>
+                <button onclick="window.print()" class="absolute top-5 left-5 bg-white/20 p-2 rounded-xl no-print">
+                    <span class="material-symbols-outlined">picture_as_pdf</span>
+                </button>
+            </div>
+            <div id="items-list" class="space-y-4"></div>
+        </div>
+
+        <!-- شاشة إضافة طلب جديد -->
+        <div id="screen-add" class="hidden">
+            <h2 class="text-2xl font-bold mb-6 text-[#735c00]">إصدار أمر شغل جديد</h2>
+            <div class="bg-white p-6 rounded-3xl shadow-lg space-y-4">
+                <input type="text" id="in-cust" placeholder="اسم الزبون" class="w-full p-4 border rounded-2xl outline-none">
+                <input type="text" id="in-item" placeholder="اسم الآيتم (مثلاً: كرتون بيتزا)" class="w-full p-4 border rounded-2xl outline-none">
+                <textarea id="in-det" rows="3" placeholder="المواصفات الفنية..." class="w-full p-4 border rounded-2xl outline-none"></textarea>
+                <div class="grid grid-cols-2 gap-4">
+                    <input type="number" id="in-qty" placeholder="العدد" class="w-full p-4 border rounded-2xl outline-none">
+                    <input type="number" id="in-tot" placeholder="السعر الكلي" class="w-full p-4 border rounded-2xl outline-none">
+                </div>
+                <input type="number" id="in-dep" placeholder="العربون المدفوع" class="w-full p-4 border rounded-2xl outline-none" value="0">
+                <button onclick="saveToCloud()" class="w-full bg-black text-[#d4af37] py-5 rounded-2xl text-lg font-bold shadow-xl">حفظ الشغل الآن ✅</button>
+                <button onclick="showHome()" class="w-full text-gray-400 py-2">إلغاء</button>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- التنقل السفلي -->
+    <nav class="fixed bottom-0 left-0 w-full bg-white border-t p-4 flex justify-around items-center shadow-2xl no-print z-50">
+        <button onclick="showHome()" class="flex flex-col items-center text-[#d4af37]">
+            <span class="material-symbols-outlined text-3xl">folder_shared</span>
+            <span class="text-[10px] font-bold">الزبائن</span>
+        </button>
+        <button onclick="showAdd()" class="bg-black text-[#d4af37] w-14 h-14 rounded-full flex items-center justify-center -mt-12 border-4 border-[#f7f9fc] shadow-lg">
+            <span class="material-symbols-outlined text-3xl">add</span>
+        </button>
+        <button onclick="alert('سيتم تفعيل المصاريف في التحديث القادم')" class="flex flex-col items-center text-gray-300">
+            <span class="material-symbols-outlined text-3xl">analytics</span>
+            <span class="text-[10px] font-bold">التقارير</span>
+        </button>
+    </nav>
+</div>
+
+<script>
+    // بياناتك الخاصة
+    const firebaseConfig = {
+        apiKey: "AIzaSyBnfABXbY5qxnirc3sumFX4TTOtlfJEM7s",
+        projectId: "golden-92eb1",
+        appId: "1:682494914009:web:518e6365b0da3627affdc8"
+    };
+
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
+    let orders = [];
+
+    // وظائف الواجهة
+    function showHome() { 
+        document.getElementById('screen-home').style.display='block';
+        document.getElementById('screen-detail').style.display='none';
+        document.getElementById('screen-add').style.display='none';
+    }
+    function showAdd() {
+        document.getElementById('screen-home').style.display='none';
+        document.getElementById('screen-add').style.display='block';
+    }
+    function showDetail(name) {
+        document.getElementById('screen-home').style.display='none';
+        document.getElementById('screen-detail').style.display='block';
+        renderCustomerDetail(name);
+    }
+
+    // جلب البيانات
+    db.collection("orders").orderBy("createdAt", "desc").onSnapshot(snap => {
+        orders = [];
+        snap.forEach(doc => orders.push({id: doc.id, ...doc.data()}));
+        renderHome();
+    });
+
+    function renderHome() {
+        const list = document.getElementById('customer-list');
+        const names = [...new Set(orders.map(o => o.customer))];
+        let totalRem = 0; let totalDep = 0;
+        
+        list.innerHTML = names.length ? "" : '<div class="text-center py-20 text-gray-400">لا يوجد زبائن.. اضغط (+) للإضافة</div>';
+
+        names.forEach(name => {
+            const myOrders = orders.filter(o => o.customer === name);
+            const rem = myOrders.reduce((s, o) => s + (o.remaining || 0), 0);
+            const dep = myOrders.reduce((s, o) => s + (o.deposit || 0), 0);
+            totalRem += rem; totalDep += dep;
+
+            const div = document.createElement('div');
+            div.className = "gold-card p-5 flex justify-between items-center mb-4";
+            div.onclick = () => showDetail(name);
+            div.innerHTML = `
+                <div>
+                    <h3 class="font-bold text-lg text-gray-800">${name}</h3>
+                    <p class="text-[10px] text-gray-400">${myOrders.length} طلبات مسجلة</p>
+                </div>
+                <div class="text-left">
+                    <p class="text-red-600 font-bold">${rem.toLocaleString()} ر.س</p>
+                    <span class="text-[9px] bg-gray-100 px-2 py-1 rounded font-bold">فتح الملف</span>
+                </div>
+            `;
+            list.appendChild(div);
+        });
+
+        document.getElementById('total-rem').innerText = totalRem.toLocaleString();
+        document.getElementById('total-dep').innerText = totalDep.toLocaleString();
+    }
+
+    function renderCustomerDetail(name) {
+        document.getElementById('det-cust-name').innerText = name;
+        const myOrders = orders.filter(o => o.customer === name);
+        const rem = myOrders.reduce((s, o) => s + (o.remaining || 0), 0);
+        document.getElementById('det-cust-total').innerText = "إجمالي ديونه: " + rem.toLocaleString() + " ر.س";
+        
+        const list = document.getElementById('items-list');
+        list.innerHTML = "";
+        myOrders.forEach(o => {
+            const div = document.createElement('div');
+            div.className = "item-box shadow-sm mb-4";
+            div.innerHTML = `
+                <div class="flex justify-between mb-2">
+                    <h4 class="font-bold text-[#735c00]">${o.itemName}</h4>
+                    <span class="text-[10px] font-bold underline">${o.status}</span>
+                </div>
+                <p class="text-[11px] text-gray-500 mb-3 bg-gray-50 p-2 rounded">${o.details || '-'}</p>
+                <div class="grid grid-cols-4 gap-1 text-center text-[10px] border-t pt-2">
+                    <div><p class="text-gray-400">العدد</p><p class="font-bold">${o.quantity}</p></div>
+                    <div><p class="text-gray-400">السعر</p><p class="font-bold">${o.totalPrice}</p></div>
+                    <div><p class="text-gray-400">المدفوع</p><p class="font-bold text-green-600">${o.deposit}</p></div>
+                    <div><p class="text-red-400 font-bold">المتبقي</p><p class="font-bold text-red-600">${o.remaining}</p></div>
+                </div>
+                <div class="mt-4 no-print flex gap-2">
+                    <button onclick="updatePay('${o.id}',${o.totalPrice},${o.deposit})" class="flex-1 bg-black text-[#d4af37] py-2 rounded-xl text-xs font-bold">تحصيل مبلغ</button>
+                    <button onclick="updateStatus('${o.id}')" class="bg-gray-100 px-3 py-1 rounded-lg text-[10px] font-bold">تغيير الحالة</button>
+                </div>`;
+            list.appendChild(div);
+        });
+    }
+
+    async function saveToCloud() {
+        const tot = parseFloat(document.getElementById('in-tot').value) || 0;
+        const dep = parseFloat(document.getElementById('in-dep').value) || 0;
+        await db.collection("orders").add({
+            customer: document.getElementById('in-cust').value,
+            itemName: document.getElementById('in-item').value,
+            details: document.getElementById('in-det').value,
+            quantity: document.getElementById('in-qty').value || 0,
+            totalPrice: tot, deposit: dep, remaining: tot - dep,
+            status: "قيد التنفيذ", createdAt: firebase.firestore.FieldValue.serverTimestamp()
+        });
+        alert("تم الحفظ بنجاح!");
+        showHome();
+    }
+
+    async function updatePay(id, tot, dep) {
+        const amt = parseFloat(prompt("أدخل مبلغ الدفعة الجديدة:"));
+        if(!isNaN(amt)) {
+            const newDep = dep + amt;
+            await db.collection("orders").doc(id).update({ deposit: newDep, remaining: tot - newDep });
+        }
+    }
+
+    async function updateStatus(id) {
+        const n = prompt("اكتب الحالة الجديدة (مثلاً: جاهز، تم التسليم):");
+        if(n) await db.collection("orders").doc(id).update({ status: n });
+    }
+</script>
+</body>
+</html>
