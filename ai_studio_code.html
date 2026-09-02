@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>مطبعة اللون الذهبي - النظام الموحد</title>
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+    
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" rel="stylesheet">
+    
+    <style>
+        * { font-family: 'Cairo', sans-serif !important; }
+        body { background-color: #f4f7f6; margin: 0; padding-bottom: 90px; }
+        .cust-card { background: white; border-radius: 15px; border-right: 8px solid #d4af37; box-shadow: 0 4px 10px rgba(0,0,0,0.05); padding: 15px; cursor: pointer; }
+        .item-box { background: #fff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 12px; border-right: 4px solid #1a1a1a; margin-bottom: 10px; position: relative; }
+        .gold-btn { background: linear-gradient(135deg, #d4af37 0%, #735c00 100%); color: white; border-radius: 12px; font-weight: bold; width: 100%; padding: 15px; }
+        @media print { .no-print { display: none !important; } body { background: white; } }
+    </style>
+</head>
+<body>
+
+<div id="app">
+    <header class="bg-[#1a1a1a] p-4 flex justify-between items-center shadow-xl border-b-4 border-[#d4af37]">
+        <div class="flex items-center gap-3">
+            <div class="w-10 h-10 bg-[#d4af37] rounded-lg flex items-center justify-center font-bold text-black shadow-lg">G</div>
+            <h1 class="text-white font-bold">مطبعة اللون الذهبي</h1>
+        </div>
+    </header>
+
+    <main class="p-4 max-w-xl mx-auto">
+        <!-- شاشة الزبائن -->
+        <div id="home-view">
+            <div class="grid grid-cols-2 gap-3 mb-6 text-center">
+                <div class="bg-white p-4 rounded-xl border-b-4 border-red-500 shadow-sm">
+                    <p class="text-[10px] text-gray-400 font-bold uppercase">الديون (متبقي)</p>
+                    <p id="sum-rem" class="text-lg font-bold text-red-600">0</p>
+                </div>
+                <div class="bg-white p-4 rounded-xl border-b-4 border-green-500 shadow-sm">
+                    <p class="text-[10px] text-gray-400 font-bold uppercase">المحصل</p>
+                    <p id="sum-dep" class="text-lg font-bold text-green-600">0</p>
+                </div>
+            </div>
+            <div id="cust-list" class="space-y-3"></div>
+        </div>
+
+        <!-- شاشة التفاصيل -->
+        <div id="detail-view" style="display:none">
+            <button onclick="goHome()" class="mb-4 text-gray-400 font-bold flex items-center">← رجوع</button>
+            <div class="bg-black text-white p-5 rounded-3xl mb-5 relative shadow-xl border-r-8 border-[#d4af37]">
+                <h2 id="det-name" class="text-xl font-bold mb-1"></h2>
+                <p id="det-total" class="text-[#d4af37] text-xs font-bold"></p>
+                <button onclick="window.print()" class="absolute top-4 left-4 bg-white/10 p-2 rounded-lg text-[10px]">PDF</button>
+            </div>
+            <button onclick="addMore()" class="w-full bg-green-600 text-white py-3 rounded-xl font-bold mb-5 shadow-md">+ طلب جديد لهذا الزبون</button>
+            <div id="items-list"></div>
+        </div>
+
+        <!-- شاشة الإضافة -->
+        <div id="add-view" style="display:none">
+            <h2 class="text-xl font-bold mb-5 text-[#735c00]">إضافة شغل جديد</h2>
+            <div class="bg-white p-5 rounded-2xl shadow-lg space-y-4">
+                <input type="text" id="in-c" placeholder="اسم الزبون" class="w-full p-3 border rounded-xl">
+                <input type="text" id="in-i" placeholder="المنتج (مثلاً: كارتون)" class="w-full p-3 border rounded-xl">
+                <textarea id="in-d" rows="3" placeholder="المواصفات الفنية..." class="w-full p-3 border rounded-xl"></textarea>
+                <div class="grid grid-cols-2 gap-3">
+                    <input type="number" id="in-q" placeholder="العدد" class="p-3 border rounded-xl">
+                    <input type="number" id="in-p" placeholder="السعر الكلي" class="p-3 border rounded-xl">
+                </div>
+                <input type="number" id="in-dep" placeholder="العربون" class="p-3 border rounded-xl" value="0">
+                <button id="save-btn" onclick="saveData()" class="gold-btn">تأكيد وحفظ الطلب ✅</button>
+                <button onclick="goHome()" class="w-full text-gray-400 py-2">إلغاء</button>
+            </div>
+        </div>
+    </main>
+
+    <nav id="nav" class="fixed bottom-0 left-0 w-full bg-white border-t p-3 flex justify-around items-center shadow-2xl no-print z-50">
+        <button onclick="goHome()" class="flex flex-col items-center text-[#d4af37]"><span class="material-symbols-outlined text-2xl">folder_shared</span><span class="text-[10px] font-bold">الزبائن</span></button>
+        <button onclick="goAdd()" class="bg-black text-[#d4af37] w-14 h-14 rounded-full flex items-center justify-center -mt-10 border-4 border-[#f8fafc] shadow-xl"><span class="material-symbols-outlined text-3xl">add</span></button>
+        <button onclick="alert('قسم التقارير قيد التطوير')" class="flex flex-col items-center text-gray-300"><span class="material-symbols-outlined text-2xl">analytics</span><span class="text-[10px]">التقارير</span></button>
+    </nav>
+</div>
+
+<script>
+    var firebaseConfig = {
+        apiKey: "AIzaSyBnfABXbY5qxnirc3sumFX4TTOtlfJEM7s",
+        projectId: "golden-92eb1",
+        appId: "1:682494914009:web:518e6365b0da3627affdc8"
+    };
+
+    firebase.initializeApp(firebaseConfig);
+    var db = firebase.firestore();
+    var allData = [];
+    var currentCust = "";
+
+    function goHome() { hideAll(); document.getElementById('home-view').style.display='block'; }
+    function goAdd() { hideAll(); document.getElementById('in-c').disabled = false; document.getElementById('add-view').style.display='block'; }
+    function addMore() { hideAll(); document.getElementById('in-c').value = currentCust; document.getElementById('in-c').disabled = true; document.getElementById('add-view').style.display='block'; }
+    function hideAll() { ['home-view','detail-view','add-view'].forEach(id => document.getElementById(id).style.display='none'); }
+
+    db.collection("orders").onSnapshot(function(snap) {
+        allData = [];
+        snap.forEach(function(doc) { var d = doc.data(); d.id = doc.id; allData.push(d); });
+        allData.sort((a,b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0));
+        renderHome();
+        if(currentCust) renderDetails(currentCust);
+    });
+
+    function renderHome() {
+        var list = document.getElementById('cust-list');
+        var names = [];
+        allData.forEach(function(o) { if(names.indexOf(o.customer) === -1 && o.customer) names.push(o.customer); });
+        var tr=0, td=0;
+        list.innerHTML = names.length ? "" : '<p class="text-center py-20 text-gray-400">لا يوجد زبائن حالياً</p>';
+        names.forEach(function(n) {
+            var myO = allData.filter(function(o) { return o.customer === n; });
+            var r=0, d=0;
+            myO.forEach(function(o) { r+=(o.remaining||0); d+=(o.deposit||0); });
+            tr+=r; td+=d;
+            var div = document.createElement('div');
+            div.className = "cust-card flex justify-between items-center mb-2";
+            div.onclick = function() { currentCust = n; hideAll(); document.getElementById('detail-view').style.display='block'; document.getElementById('det-name').innerText = n; renderDetails(n); };
+            div.innerHTML = '<div><h3 class="font-bold">'+n+'</h3><p class="text-[10px] text-gray-400">'+myO.length+' طلبات</p></div><div class="text-red-600 font-bold text-sm">'+r.toLocaleString()+'</div>';
+            list.appendChild(div);
+        });
+        document.getElementById('sum-rem').innerText = tr.toLocaleString();
+        document.getElementById('sum-dep').innerText = td.toLocaleString();
+    }
+
+    function renderDetails(name) {
+        var myO = allData.filter(function(o) { return o.customer === name; });
+        var rem = myO.reduce((s,o) => s + (o.remaining||0), 0);
+        document.getElementById('det-total').innerText = "المجموع المتبقي بذمته: " + rem.toLocaleString();
+        var list = document.getElementById('items-list');
+        list.innerHTML = "";
+        myO.forEach(function(o) {
+            var div = document.createElement('div');
+            div.className = "item-box";
+            div.innerHTML = '<div class="flex justify-between mb-2"><h4><b>'+o.itemName+'</b></h4><span class="text-[10px] font-bold underline">'+(o.status||'تنفيذ')+'</span></div>' +
+                '<p class="text-xs text-gray-500 mb-2">'+(o.details||'-')+'</p>' +
+                '<div class="grid grid-cols-3 gap-1 text-center text-[10px] border-t pt-2 font-bold">' +
+                '<div><p class="text-gray-400">العدد</p>'+o.quantity+'</div>' +
+                '<div><p class="text-gray-400">السعر</p>'+o.totalPrice+'</div>' +
+                '<div class="text-red-600 font-bold"><p class="text-gray-400">المتبقي</p>'+o.remaining+'</div></div>' +
+                '<div class="mt-3 flex gap-2"><button onclick="upPay(\''+o.id+'\','+o.totalPrice+','+o.deposit+')" class="flex-1 bg-black text-[#d4af37] py-1 rounded text-[10px] font-bold">قبض</button><button onclick="del(\''+o.id+'\')" class="text-red-300">🗑️</button></div>';
+            list.appendChild(div);
+        });
+    }
+
+    function saveData() {
+        var b = document.getElementById('save-btn');
+        var c = document.getElementById('in-c').value;
+        var p = parseFloat(document.getElementById('in-p').value) || 0;
+        var d = parseFloat(document.getElementById('in-dep').value) || 0;
+        if(!c) return alert("اكتب اسم الزبون");
+        b.innerText = "جاري الحفظ... ⏳"; b.disabled = true;
+        db.collection("orders").add({
+            customer: c, itemName: document.getElementById('in-i').value,
+            details: document.getElementById('in-det').value, quantity: document.getElementById('in-qty').value,
+            totalPrice: p, deposit: d, remaining: p - d, createdAt: firebase.firestore.FieldValue.serverTimestamp()
+        }).then(function() { b.innerText = "تأكيد وحفظ الطلب ✅"; b.disabled = false; goHome(); }).catch(function(e) { alert("خطأ: " + e.message); b.disabled = false; });
+    }
+
+    function upPay(id, t, d) {
+        var a = parseFloat(prompt("أدخل مبلغ الدفعة:"));
+        if(!isNaN(a)) db.collection("orders").doc(id).update({ deposit: d+a, remaining: t-(d+a) });
+    }
+
+    function del(id) { if(confirm("حذف؟")) db.collection("orders").doc(id).delete(); }
+</script>
+</body>
+</html>
