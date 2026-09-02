@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>اللون الذهبي - كاشف الأخطاء</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        * { font-family: 'Cairo', sans-serif !important; }
+        body { background-color: #f8fafc; padding-bottom: 90px; }
+        .gold-btn { background: #d4af37; color: black; border-radius: 12px; font-weight: bold; width: 100%; padding: 15px; }
+    </style>
+</head>
+<body>
+
+<div id="app" class="p-4 max-w-xl mx-auto">
+    <div id="add-view" class="bg-white p-6 rounded-3xl shadow-lg space-y-4">
+        <h2 class="text-xl font-bold mb-5">إرسال طلب تجريبي</h2>
+        <input type="text" id="in-c" placeholder="اسم الزبون" class="w-full p-4 border rounded-2xl">
+        <input type="text" id="in-i" placeholder="المنتج" class="w-full p-4 border rounded-2xl">
+        <input type="number" id="in-p" placeholder="السعر" class="w-full p-4 border rounded-2xl">
+        <button id="save-btn" onclick="saveData()" class="gold-btn">حفظ وتأكيد الحساب ✅</button>
+        <p id="error-log" class="text-red-500 text-xs mt-4 font-bold"></p>
+    </div>
+</div>
+
+<script>
+    // تأكد أن هذه البيانات مطابقة لمشروعك 100%
+    var firebaseConfig = {
+        apiKey: "AIzaSyBnfABXbY5qxnirc3sumFX4TTOtlfJEM7s",
+        projectId: "golden-92eb1",
+        appId: "1:682494914009:web:518e6365b0da3627affdc8"
+    };
+
+    try {
+        firebase.initializeApp(firebaseConfig);
+        var db = firebase.firestore();
+        console.log("Firebase Initialized");
+    } catch (e) {
+        alert("خطأ في تشغيل Firebase: " + e.message);
+    }
+
+    function saveData() {
+        var btn = document.getElementById('save-btn');
+        var errLog = document.getElementById('error-log');
+        var c = document.getElementById('in-c').value;
+        var i = document.getElementById('in-i').value;
+        var p = parseFloat(document.getElementById('in-p').value) || 0;
+
+        if(!c || !i) return alert("اكتب الاسم والمنتج");
+
+        btn.innerText = "جاري المحاولة بالسحاب...";
+        btn.disabled = true;
+
+        db.collection("orders").add({
+            customer: c,
+            itemName: i,
+            totalPrice: p,
+            remaining: p,
+            createdAt: firebase.firestore.FieldValue.serverTimestamp()
+        }).then(function() {
+            alert("تم الحفظ بنجاح! السحاب شغال ✅");
+            btn.innerText = "حفظ وتأكيد الحساب ✅";
+            btn.disabled = false;
+        }).catch(function(error) {
+            // هنا تظهر الحقيقة
+            btn.innerText = "فشل الحفظ ❌";
+            btn.disabled = false;
+            errLog.innerText = "السبب: " + error.code + " - " + error.message;
+            alert("فشل الحفظ! السبب: " + error.message);
+        });
+    }
+</script>
+</body>
+</html>
