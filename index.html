@@ -9,7 +9,7 @@
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
     
-    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght=400;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700&display=swap" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" rel="stylesheet">
     
     <style>
@@ -62,18 +62,18 @@
         <!-- شاشة الإضافة -->
         <div id="add-view" style="display:none">
             <h2 class="text-xl font-bold mb-5 text-[#735c00]">إضافة شغل جديد</h2>
-            <div class="bg-white p-5 rounded-2xl shadow-lg space-y-4">
-                <input type="text" id="in-c" placeholder="اسم الزبون" class="w-full p-3 border rounded-xl">
-                <input type="text" id="in-i" placeholder="المنتج (مثلاً: كارتون)" class="w-full p-3 border rounded-xl">
+            <form id="order-form" onsubmit="saveData(event)" class="bg-white p-5 rounded-2xl shadow-lg space-y-4">
+                <input type="text" id="in-c" placeholder="اسم الزبون" class="w-full p-3 border rounded-xl" required>
+                <input type="text" id="in-i" placeholder="المنتج (مثلاً: كارتون)" class="w-full p-3 border rounded-xl" required>
                 <textarea id="in-d" rows="3" placeholder="المواصفات الفنية..." class="w-full p-3 border rounded-xl"></textarea>
                 <div class="grid grid-cols-2 gap-3">
-                    <input type="number" id="in-q" placeholder="العدد" class="p-3 border rounded-xl">
-                    <input type="number" id="in-p" placeholder="السعر الكلي" class="p-3 border rounded-xl">
+                    <input type="number" id="in-q" placeholder="العدد" class="p-3 border rounded-xl" required>
+                    <input type="number" id="in-p" placeholder="السعر الكلي" class="p-3 border rounded-xl" required>
                 </div>
                 <input type="number" id="in-dep" placeholder="العربون" class="p-3 border rounded-xl" value="0">
-                <button id="save-btn" onclick="saveData()" class="gold-btn">تأكيد وحفظ الطلب ✅</button>
-                <button onclick="goHome()" class="w-full text-gray-400 py-2">إلغاء</button>
-            </div>
+                <button type="submit" id="save-btn" class="gold-btn">تأكيد وحفظ الطلب ✅</button>
+                <button type="button" onclick="goHome()" class="w-full text-gray-400 py-2">إلغاء</button>
+            </form>
         </div>
     </main>
 
@@ -85,7 +85,7 @@
 </div>
 
 <script>
-    // إعدادات Firebase الخاصة بك
+    // إعدادات Firebase الخاصة بمشروعك
     var firebaseConfig = {
         apiKey: "AIzaSyBnfABXbY5qxnirc3sumFX4TTOtlfJEM7s",
         projectId: "golden-92eb1",
@@ -98,6 +98,7 @@
     var currentCust = "";
 
     function goHome() { hideAll(); document.getElementById('home-view').style.display='block'; }
+    
     function goAdd() { 
         hideAll(); 
         document.getElementById('in-c').value = "";
@@ -105,6 +106,7 @@
         document.getElementById('add-view').style.display='block'; 
         clearInputs();
     }
+    
     function addMore() { 
         hideAll(); 
         document.getElementById('in-c').value = currentCust; 
@@ -112,7 +114,9 @@
         document.getElementById('add-view').style.display='block'; 
         clearInputs();
     }
+    
     function hideAll() { ['home-view','detail-view','add-view'].forEach(id => document.getElementById(id).style.display='none'); }
+    
     function clearInputs() {
         document.getElementById('in-i').value = "";
         document.getElementById('in-d').value = "";
@@ -121,16 +125,23 @@
         document.getElementById('in-dep').value = "0";
     }
 
-    // جلب البيانات حياً من السيرفر
+    // الاستماع المتزامن للبيانات من Firestore
     db.collection("orders").onSnapshot(function(snap) {
         allData = [];
-        snap.forEach(function(doc) { var d = doc.data(); d.id = doc.id; allData.push(d); });
+        snap.forEach(function(doc) { 
+            var d = doc.data(); 
+            d.id = doc.id; 
+            allData.push(d); 
+        });
         allData.sort((a,b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0));
         renderHome();
         if(currentCust) renderDetails(currentCust);
+    }, function(error) {
+        console.error("Firebase Snapshot Error: ", error);
+        alert("فشل جلب البيانات من السيرفر. تأكد من إعدادات القواعد الحماية (Rules): " + error.message);
     });
 
-    // عرض قائمة الزبائن في الشاشة الرئيسية
+    // رندر قائمة الزبائن في الواجهة الأساسية
     function renderHome() {
         var list = document.getElementById('cust-list');
         var names = [];
@@ -151,14 +162,14 @@
                 document.getElementById('det-name').innerText = n; 
                 renderDetails(n); 
             };
-            div.innerHTML = '<div><h3 class="font-bold">'+n+'</h3><p class="text-[10px] text-gray-400">'+myO.length+' طلبات</p></div><div class="text-red-600 font-bold text-sm">'+r.toLocaleString()+' د.ع</div>';
+            div.innerHTML = '<div><h3 class="font-bold">'+n+'</h3><p class="text-[10px] text-gray-400">'+myO.length+' طلبات</p></div><div class="text-red-600 font-bold text-sm">'+r.toLocaleString()+'</div>';
             list.appendChild(div);
         });
         document.getElementById('sum-rem').innerText = tr.toLocaleString();
         document.getElementById('sum-dep').innerText = td.toLocaleString();
     }
 
-    // عرض تفاصيل زبون معين
+    // رندر تفاصيل المشتريات للزبون المختار
     function renderDetails(customerName) {
         var list = document.getElementById('items-list');
         var myO = allData.filter(function(o) { return o.customer === customerName; });
@@ -186,22 +197,18 @@
         document.getElementById('det-total').innerText = "إجمالي ديون الزبون: " + totalRem.toLocaleString() + " د.ع";
     }
 
-    // دالة حفظ البيانات سحابياً في Firebase (التي كانت مفقودة)
-    function saveData() {
+    // دالة حفظ البيانات وتجنب مشكلة الـ Refresh التلقائي
+    function saveData(e) {
+        if(e) e.preventDefault(); // منع المتصفح من تحديث الصفحة فوراً
+
         var customer = document.getElementById('in-c').value.trim();
         var item = document.getElementById('in-i').value.trim();
         var details = document.getElementById('in-d').value.trim();
         var quantity = parseInt(document.getElementById('in-q').value) || 0;
         var price = parseFloat(document.getElementById('in-p').value) || 0;
         var deposit = parseFloat(document.getElementById('in-dep').value) || 0;
-        var remaining = price - deposit; // حساب المتبقي تلقائياً
+        var remaining = price - deposit;
 
-        if (!customer || !item || !price) {
-            alert("الرجاء ملء الحقول الأساسية: اسم الزبون، المنتج، والسعر الكلي.");
-            return;
-        }
-
-        // تغيير نص الزر لمنع الضغط المتكرر أثناء الحفظ
         var saveBtn = document.getElementById('save-btn');
         saveBtn.disabled = true;
         saveBtn.innerText = "جاري الحفظ سحابياً... ⏳";
@@ -214,20 +221,20 @@
             price: price,
             deposit: deposit,
             remaining: remaining,
-            createdAt: firebase.firestore.FieldValue.serverTimestamp() // وقت السيرفر
+            createdAt: firebase.firestore.FieldValue.serverTimestamp()
         })
         .then(function() {
             alert("تم حفظ الطلب بنجاح سحابياً! ✅");
             saveBtn.disabled = false;
             saveBtn.innerText = "تأكيد وحفظ الطلب ✅";
-            currentCust = customer; // تعيين الزبون الحالي لعرض تفاصيله
+            currentCust = customer;
             hideAll();
             document.getElementById('detail-view').style.display = 'block';
             document.getElementById('det-name').innerText = customer;
         })
         .catch(function(error) {
-            console.error("Error adding document: ", error);
-            alert("حدث خطأ أثناء الحفظ! يرجى التحقق من قواعد الحماية في Firebase.");
+            console.error("Firebase Add Error: ", error);
+            alert("فشل الحفظ بالسيرفر! السبب الغالب هو ضبط القواعد (Rules) في فايربيس.\n\nتفاصيل الخطأ: " + error.message);
             saveBtn.disabled = false;
             saveBtn.innerText = "تأكيد وحفظ الطلب ✅";
         });
